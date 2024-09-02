@@ -186,12 +186,14 @@ const handleLogin = (formData) => {
   }
 }
 
-const handleRegister = (formData) => {
-  console.log('Register:', formData)
-  isLoggedIn.value = true
-  userAvatarUrl.value = formData.avatarUrl // 设置用户头像URL
-  username.value = formData.username // 设置用户名
-  authModal.value.handleClose()
+const handleRegister = (message) => {
+  console.log('Register:', message)
+  ElMessage.success(message) // 显示注册成功消息
+  // 不设置登录状态
+  // 不关闭模态框，而是切换到登录界面
+  if (authModal.value) {
+    authModal.value.switchToLogin()
+  }
 }
 
 const handleLogout = () => {

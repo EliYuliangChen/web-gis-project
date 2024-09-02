@@ -113,11 +113,10 @@ const handleRegister = async () => {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
 
-        emit('register', {
-          avatarUrl: response.data.user.avatar_url,
-          username: response.data.user.username
-        })
-        handleClose()
+        emit('register', response.data.message)
+        isRegistering.value = false
+        resetForm()
+        // handleClose()
       } catch (error) {
         ElMessage.error({
           message: error.response?.data?.message || '注册失败，请稍后再试',
@@ -183,6 +182,11 @@ const resetForm = () => {
   uploadKey.value = Date.now() // 强制重置上传状态
 }
 
+const switchToLogin = () => {
+  isRegistering.value = false
+  resetForm()
+}
+
 const connectWebSocket = () => {
   ws.value = new WebSocket('ws://localhost:3000')
 
@@ -209,7 +213,7 @@ onUnmounted(() => {
   disconnectWebSocket()
 })
 
-defineExpose({ open, handleClose })
+defineExpose({ open, handleClose, switchToLogin })
 </script>
 
 <style scoped>
