@@ -7,11 +7,11 @@
         <el-dropdown v-if="isLoggedIn" class="user-menu">
           <span class="el-dropdown-link">
             <img :src="userAvatarUrl || '/default_avatar.png'" alt="avatar" class="user-avatar"/>
-            {{ username }}
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="goToProfile">用户界面</el-dropdown-item>
+              <el-dropdown-item disabled>{{ username }}</el-dropdown-item>
+              <el-dropdown-item divided @click="goToProfile">用户界面</el-dropdown-item>
               <el-dropdown-item @click="handleLogout">登出</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -237,18 +237,25 @@ const goToProfile = () => {
 
 .top-bar-right {
   display: flex;
-  gap: 10px;
+  align-items: center;
 }
 
 .user-menu {
-  margin-left: auto;
+  cursor: pointer;
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
-  margin-right: 10px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
 }
 
 .map-container {
