@@ -177,7 +177,7 @@ const handleLogin = (formData) => {
   console.log('MapComponent 收到登录数据:', formData)
   if (formData) {
     isLoggedIn.value = true
-    userAvatarUrl.value = formData.avatarUrl // 设置用户头像URL
+    userAvatarUrl.value = `http://localhost:3000${formData.avatarUrl}` // 设置用户头像URL
     username.value = formData.username // 设置用户名
     authModal.value.handleClose()
   } else {

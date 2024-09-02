@@ -39,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, defineEmits, defineExpose, onUnmounted, watch } from 'vue'
+import { ref, defineEmits, defineExpose, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
@@ -54,9 +54,7 @@ const emit = defineEmits(['login', 'register'])
 const uploadAction = 'http://localhost:3000/upload-avatar'
 const defaultAvatarUrl = '/default_avatar.png'
 
-// 添加定时器相关变量
-const TIMEOUT_DURATION = 30000 // 30秒
-let timeoutId = null
+const ws = ref(null)
 
 const rules = {
   username: [
@@ -160,12 +158,11 @@ const beforeAvatarUpload = (file) => {
 
 const open = () => {
   isVisible.value = true
-  startTimeout()
+  connectWebSocket()
 }
 
 const handleClose = () => {
   if (form.value.avatarUrl && form.value.avatarUrl.includes('/uploads/temp/')) {
-    // 调用后端删除临时头像
     const tempAvatarUrl = form.value.avatarUrl.split('http://localhost:3000')[1]
     axios.post('http://localhost:3000/delete-temp-avatar', { tempAvatarUrl })
       .then(() => {
@@ -178,7 +175,7 @@ const handleClose = () => {
 
   resetForm()
   isVisible.value = false
-  clearTimeout(timeoutId)
+  disconnectWebSocket()
 }
 
 const resetForm = () => {
@@ -186,36 +183,30 @@ const resetForm = () => {
   uploadKey.value = Date.now() // 强制重置上传状态
 }
 
-// 添加开始计时的函数
-const startTimeout = () => {
-  clearTimeout(timeoutId) // 清除之前的定时器
-  timeoutId = setTimeout(() => {
-    handleClose()
-    ElMessage.info('由于长时间未操作，登录/注册界面已自动关闭')
-  }, TIMEOUT_DURATION)
-}
+const connectWebSocket = () => {
+  ws.value = new WebSocket('ws://localhost:3000')
 
-// 添加重置计时器的函数
-const resetTimeout = () => {
-  if (isVisible.value) {
-    startTimeout()
+  ws.value.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (data.type === 'FILE_DELETED' && form.value.avatarUrl.includes(data.filename)) {
+      handleClose()
+      ElMessage.info('由于长时间未操作，上传的头像已被删除')
+    }
   }
 }
 
-// 监听表单变化，重置计时器
-watch(() => form.value, resetTimeout, { deep: true })
-
-// 监听 isVisible 的变化
-watch(isVisible, (newValue) => {
-  if (!newValue) {
-    handleClose()
-  } else {
-    startTimeout()
+const disconnectWebSocket = () => {
+  if (ws.value) {
+    ws.value.close()
   }
+}
+
+onMounted(() => {
+  connectWebSocket()
 })
 
 onUnmounted(() => {
-  handleClose()
+  disconnectWebSocket()
 })
 
 defineExpose({ open, handleClose })
