@@ -63,6 +63,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import AuthModal from './AuthModal.vue'
+import { ElMessage } from 'element-plus'
 import { Plus, Minus, Aim, View, Discount, ArrowDown } from '@element-plus/icons-vue'
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiZWxpY2hlbiIsImEiOiJjbTBpbXlobDkwbm02Mm1xYW8wZDd6aTFrIn0.ZTjFhv29BHafPE_-v7Ng9g'
@@ -173,11 +174,16 @@ const openAuthModal = () => {
 }
 
 const handleLogin = (formData) => {
-  console.log('Login:', formData)
-  isLoggedIn.value = true
-  userAvatarUrl.value = formData.avatarUrl // 设置用户头像URL
-  username.value = formData.username // 设置用户名
-  authModal.value.close()
+  console.log('MapComponent 收到登录数据:', formData)
+  if (formData) {
+    isLoggedIn.value = true
+    userAvatarUrl.value = formData.avatarUrl // 设置用户头像URL
+    username.value = formData.username // 设置用户名
+    authModal.value.handleClose()
+  } else {
+    console.error('登录数据无效:', formData)
+    ElMessage.error('登录失败: 接收到的数据无效')
+  }
 }
 
 const handleRegister = (formData) => {
@@ -185,7 +191,7 @@ const handleRegister = (formData) => {
   isLoggedIn.value = true
   userAvatarUrl.value = formData.avatarUrl // 设置用户头像URL
   username.value = formData.username // 设置用户名
-  authModal.value.close()
+  authModal.value.handleClose()
 }
 
 const handleLogout = () => {

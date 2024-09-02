@@ -73,26 +73,30 @@ const rules = {
 }
 
 const handleSubmit = async () => {
-  authForm.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        const response = await axios.post('http://localhost:3000/login', form.value)
-        if (response.data.token) {
-          emit('login', {
-            token: response.data.token,
-            avatarUrl: response.data.avatarUrl,
-            username: response.data.username
-          })
-          handleClose()
-        }
-      } catch (error) {
-        ElMessage.error({
-          message: error.response?.data?.message || '登录失败，请检查您的邮箱和密码',
-          duration: 5000
-        })
-      }
+  try {
+    await authForm.value.validate()
+    console.log('发送登录请求:', form.value)
+    const response = await axios.post('http://localhost:3000/login', form.value)
+    console.log('收到登录响应:', response.data)
+    if (response.data) {
+      console.log('登录成功,发送数据:', response.data)
+      emit('login', {
+        avatarUrl: response.data.avatarUrl,
+        username: response.data.username
+      })
+      handleClose()
+      ElMessage.success('登录成功!')
+    } else {
+      console.error('登录响应中没有token:', response.data)
+      throw new Error('登录失败: 服务器响应中没有token')
     }
-  })
+  } catch (error) {
+    console.error('登录错误:', error)
+    ElMessage.error({
+      message: error.response?.data?.message || error.message || '登录失败，请检查您的邮箱和密码',
+      duration: 5000
+    })
+  }
 }
 
 const handleRegister = async () => {
@@ -214,7 +218,7 @@ onUnmounted(() => {
   handleClose()
 })
 
-defineExpose({ open })
+defineExpose({ open, handleClose })
 </script>
 
 <style scoped>
