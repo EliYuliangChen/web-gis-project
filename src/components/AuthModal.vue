@@ -76,17 +76,14 @@ const handleSubmit = async () => {
     console.log('发送登录请求:', form.value)
     const response = await axios.post('http://localhost:3000/login', form.value)
     console.log('收到登录响应:', response.data)
-    if (response.data) {
+    if (response.data && response.data.username) {
       console.log('登录成功,发送数据:', response.data)
-      emit('login', {
-        avatarUrl: response.data.avatarUrl,
-        username: response.data.username
-      })
+      emit('login', response.data)
       handleClose()
       ElMessage.success('登录成功!')
     } else {
-      console.error('登录响应中没有token:', response.data)
-      throw new Error('登录失败: 服务器响应中没有token')
+      console.error('登录响应中没有用户名:', response.data)
+      throw new Error('登录失败: 服务器响应中没有用户名')
     }
   } catch (error) {
     console.error('登录错误:', error)

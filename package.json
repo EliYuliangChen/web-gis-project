@@ -17,6 +17,7 @@
     "eslint-plugin-vue": "^7.20.0",
     "mapbox-gl": "^3.6.0",
     "vue": "^3.2.13",
+    "vue-cropper": "^1.1.4",
     "vue-router": "^4.0.3",
     "vuex": "^4.0.0"
   },

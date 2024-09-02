@@ -11,7 +11,7 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item disabled>{{ username }}</el-dropdown-item>
-              <el-dropdown-item divided @click="goToProfile">用户界面</el-dropdown-item>
+              <el-dropdown-item divided @click="openUserProfile">用户界面</el-dropdown-item>
               <el-dropdown-item @click="handleLogout">登出</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -19,6 +19,11 @@
         <el-button v-else @click="openAuthModal">登录 / 注册</el-button>
       </div>
       <AuthModal ref="authModal" @login="handleLogin" @register="handleRegister" />
+      <UserProfileModal
+        ref="userProfileModal"
+        :initial-user-data="{ username, email: userEmail, avatarUrl: userAvatarUrl }"
+        @update:user-data="updateUserData"
+      />
     </el-header>
 
     <!-- Map Container -->
@@ -63,6 +68,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import AuthModal from './AuthModal.vue'
+import UserProfileModal from './UserProfileModal.vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Minus, Aim, View, Discount, ArrowDown } from '@element-plus/icons-vue'
 
@@ -76,6 +82,9 @@ const marker = ref(null) // 用于放置搜索结果标记
 
 const userAvatarUrl = ref('') // 用户头像URL
 const username = ref('') // 用户名
+
+const userProfileModal = ref(null)
+const userEmail = ref('') // 用户邮箱
 
 const getEasternTime = () => {
   const options = { timeZone: 'America/New_York', hour: 'numeric', hour12: false }
@@ -175,10 +184,16 @@ const openAuthModal = () => {
 
 const handleLogin = (formData) => {
   console.log('MapComponent 收到登录数据:', formData)
-  if (formData) {
+  if (formData && formData.username) {
     isLoggedIn.value = true
-    userAvatarUrl.value = `http://localhost:3000${formData.avatarUrl}` // 设置用户头像URL
-    username.value = formData.username // 设置用户名
+    userAvatarUrl.value = formData.avatarUrl ? `http://localhost:3000${formData.avatarUrl}` : '/default_avatar.png'
+    username.value = formData.username
+    if (formData.id) {
+      localStorage.setItem('userId', formData.id.toString())
+      console.log('Stored userId:', formData.id)
+    } else {
+      console.warn('Login successful but no user ID provided')
+    }
     authModal.value.handleClose()
   } else {
     console.error('登录数据无效:', formData)
@@ -203,10 +218,20 @@ const handleLogout = () => {
   // 清除其他登录相关的数据
 }
 
-const goToProfile = () => {
-  // 这里处理跳转到用户界面的逻辑
-  console.log('Go to user profile')
+const openUserProfile = () => {
+  userProfileModal.value.open()
 }
+
+const updateUserData = (newData) => {
+  username.value = newData.username
+  userAvatarUrl.value = newData.avatarUrl
+  // 如果需要更新其他数据，也可以在这里添加
+}
+
+// const goToProfile = () => {
+//   // 这里处理跳转到用户界面的逻辑
+//   console.log('Go to user profile')
+// }
 </script>
 
 <style scoped>
