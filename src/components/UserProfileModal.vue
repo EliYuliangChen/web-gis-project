@@ -3,14 +3,15 @@
       <div class="user-profile-content">
         <div class="user-avatar-section">
           <el-avatar :size="150" :src="avatarUrl" />
+          <el-button size="small" type="primary" @click="openCropper">更换头像</el-button>
           <el-upload
             class="avatar-uploader"
-            :action="`${API_BASE_URL}/api/upload-avatar`"
+            :action="null"
             :show-file-list="false"
-            :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
+            @change="handleFileChange"
           >
-            <el-button size="small" type="primary">更换头像</el-button>
+            <el-button size="small" type="primary">上传图片</el-button>
           </el-upload>
         </div>
         <div class="user-info-section">
@@ -53,12 +54,16 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 裁剪头像对话框 -->
+    <CropperModal ref="cropperModal" :form="userForm" :defaultAvatarUrl="avatarUrl" @updateAvatarUrl="handleAvatarUpdate" />
   </template>
 
 <script setup>
 import { ref, reactive, defineEmits, defineExpose, defineProps } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import CropperModal from './CropperModal.vue' // 引入裁剪组件
 
 const API_BASE_URL = 'http://localhost:3000'
 
@@ -69,7 +74,8 @@ const isVisible = ref(false)
 const avatarUrl = ref(props.initialUserData.avatarUrl)
 const userForm = reactive({
   username: props.initialUserData.username,
-  email: props.initialUserData.email
+  email: props.initialUserData.email,
+  avatarUrl: props.initialUserData.avatarUrl
 })
 const isEditingUsername = ref(false)
 const changePasswordVisible = ref(false)
@@ -78,6 +84,8 @@ const passwordForm = reactive({
   newPassword: '',
   confirmPassword: ''
 })
+
+const cropperModal = ref(null)
 
 const open = async () => {
   isVisible.value = true
@@ -96,9 +104,16 @@ const open = async () => {
   }
 }
 
-const handleAvatarSuccess = (response) => {
-  avatarUrl.value = `${API_BASE_URL}${response.avatarUrl}`
-  emit('update:userData', { ...props.initialUserData, avatarUrl: avatarUrl.value })
+const openCropper = () => {
+  cropperModal.value.show(avatarUrl.value)
+}
+
+const handleFileChange = (file) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    cropperModal.value.show(e.target.result)
+  }
+  reader.readAsDataURL(file.raw)
 }
 
 const beforeAvatarUpload = (file) => {
@@ -112,6 +127,12 @@ const beforeAvatarUpload = (file) => {
     ElMessage.error('头像图片大小不能超过 2MB!')
   }
   return isJPG && isLt2M
+}
+
+const handleAvatarUpdate = (newAvatarUrl) => {
+  avatarUrl.value = newAvatarUrl
+  userForm.avatarUrl = newAvatarUrl // 更新表单中的头像URL
+  emit('update:userData', { ...props.initialUserData, avatarUrl: newAvatarUrl })
 }
 
 const toggleUsernameEdit = async () => {
@@ -142,19 +163,6 @@ const toggleUsernameEdit = async () => {
     isEditingUsername.value = true
   }
 }
-
-// const uploadAvatar = async (file) => {
-//   try {
-//     const formData = new FormData()
-//     formData.append('avatar', file)
-//     formData.append('userId', localStorage.getItem('userId'))
-
-//     const response = await axios.post(`${API_BASE_URL}/api/upload-avatar`, formData)
-//     handleAvatarSuccess(response.data)
-//   } catch (error) {
-//     ElMessage.error('上传头像失败，请稍后再试')
-//   }
-// }
 
 const changePassword = () => {
   changePasswordVisible.value = true
