@@ -1,6 +1,14 @@
 <template>
     <el-dialog v-model="isVisible" title="裁剪头像" width="600px" @close="handleClose">
       <div>
+        <el-upload
+            class="avatar-uploader"
+            :action="null"
+            :show-file-list="false"
+            :before-upload="beforeAvatarUpload"
+            @change="handleFileChange"
+        >
+        </el-upload>
         <img ref="cropperImage" :src="imageUrl" alt="图片加载失败" style="max-width: 100%;">
         <!-- <div class="cropper-overlay"></div> -->
       </div>
@@ -46,6 +54,19 @@ const cancelCrop = () => {
   emit('updateAvatarUrl', localAvatarUrl.value) // 通知父组件更新
 }
 
+const beforeAvatarUpload = (file) => {
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isJPG) {
+    ElMessage.error('头像图片必须是 JPG 或 PNG 格式!')
+  }
+  if (!isLt2M) {
+    ElMessage.error('头像图片大小不能超过 2MB!')
+  }
+  return isJPG && isLt2M
+}
+
 const saveCrop = () => {
   if (cropper.value) {
     const canvas = cropper.value.getCroppedCanvas({
@@ -86,10 +107,21 @@ const initCropper = () => {
         guides: false,
         center: true,
         highlight: false,
-        cropBoxResizable: false,
+        // cropBoxResizable: false,
         cropBoxMovable: false,
+        cropBoxResizable: true,
+        minCropBoxWidth: 200,
+        minCropBoxHeight: 200,
         ready () {
           // 在这里可以进一步自定义裁剪框的行为
+          const cropBoxData = cropper.value.getCropBoxData()
+          const size = Math.min(cropBoxData.width, cropBoxData.height)
+          cropper.value.setCropBoxData({
+            left: (cropBoxData.width - size) / 2 + cropBoxData.left,
+            top: (cropBoxData.height - size) / 2 + cropBoxData.top,
+            width: size,
+            height: size
+          })
         }
       })
     } else {
@@ -119,6 +151,11 @@ defineExpose({ show })
 <style scoped>
 .cropper-container {
   position: relative;
+}
+
+:deep(.cropper-view-box),
+:deep(.cropper-face) {
+  border-radius: 50%;
 }
 
 </style>

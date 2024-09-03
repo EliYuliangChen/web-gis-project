@@ -5,7 +5,7 @@
           <el-avatar :size="150" :src="avatarUrl" />
           <el-upload
             class="avatar-uploader"
-            :action="`${API_BASE_URL}/upload-avatar`"
+            :action="`${API_BASE_URL}/api/upload-avatar`"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
