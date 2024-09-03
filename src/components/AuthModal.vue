@@ -35,6 +35,7 @@
       </el-button>
       <el-button type="text" v-if="!isRegistering">忘记密码？</el-button>
     </div>
+    <CropperModal ref="cropperModal" :form="form" :defaultAvatarUrl="defaultAvatarUrl" @updateAvatarUrl="updateAvatarUrl" />
   </el-dialog>
 </template>
 
@@ -42,12 +43,14 @@
 import { ref, defineEmits, defineExpose, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import CropperModal from './CropperModal.vue'
 
 const isVisible = ref(false)
 const isRegistering = ref(false)
-const form = ref({ username: '', email: '', password: '', avatarUrl: '' })
+const form = ref({ username: '', email: '', password: '', avatarUrl: '', previousTempAvatarUrl: '' })
 const authForm = ref(null)
 const uploadKey = ref(Date.now())
+const cropperModal = ref(null)
 
 const emit = defineEmits(['login', 'register'])
 
@@ -131,9 +134,23 @@ const toggleRegistering = () => {
 }
 
 const handleAvatarSuccess = (response) => {
-  console.log('Upload response:', response)
+  // 删除当前用户之前上传的临时文件
+  if (form.value.previousTempAvatarUrl) {
+    const tempAvatarUrl = form.value.previousTempAvatarUrl.split('http://localhost:3000')[1]
+    axios.post('http://localhost:3000/delete-temp-avatar', { tempAvatarUrl })
+      .then(() => {
+        console.log('上一个临时头像删除成功')
+      })
+      .catch((error) => {
+        console.error('删除上一个临时头像时出错:', error)
+      })
+  }
+
+  // 更新form中的头像URL和临时文件URL
   if (response.tempAvatarUrl) {
     form.value.avatarUrl = `http://localhost:3000${response.tempAvatarUrl}`
+    form.value.previousTempAvatarUrl = form.value.avatarUrl // 记录新上传的临时文件
+    cropperModal.value.show(form.value.avatarUrl) // 显示裁剪窗口
   } else {
     console.error('Failed to get tempAvatarUrl from the response:', response)
   }
@@ -152,6 +169,10 @@ const beforeAvatarUpload = (file) => {
   return isJPG && isLt2M
 }
 
+const updateAvatarUrl = (newAvatarUrl) => {
+  form.value.avatarUrl = newAvatarUrl
+}
+
 const open = () => {
   isVisible.value = true
   connectWebSocket()
@@ -168,6 +189,8 @@ const handleClose = () => {
         console.error('删除临时头像时出错:', error)
       })
   }
+
+  form.value.previousTempAvatarUrl = ''
 
   resetForm()
   isVisible.value = false

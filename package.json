@@ -13,11 +13,13 @@
     "@vue/eslint-config-standard": "^6.1.0",
     "axios": "^1.7.7",
     "core-js": "^3.8.3",
+    "cropperjs": "^1.6.2",
     "element-plus": "^2.8.1",
     "eslint-plugin-vue": "^7.20.0",
     "mapbox-gl": "^3.6.0",
     "vue": "^3.2.13",
     "vue-cropper": "^1.1.4",
+    "vue-cropperjs": "^5.0.0",
     "vue-router": "^4.0.3",
     "vuex": "^4.0.0"
   },
