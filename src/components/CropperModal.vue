@@ -9,7 +9,7 @@
             @change="handleFileChange"
         >
         </el-upload>
-        <img ref="cropperImage" :src="imageUrl" alt="图片加载失败" style="max-width: 100%;">
+        <img ref="cropperImage" :src="imageUrl" alt="Avatar link is lost, please refresh the page or upload again" style="max-width: 100%;">
         <!-- <div class="cropper-overlay"></div> -->
       </div>
       <div class="dialog-footer">

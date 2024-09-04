@@ -63,6 +63,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
@@ -105,7 +106,29 @@ const updateMapLighting = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    try {
+      // 使用JWT token请求用户信息
+      const response = await axios.get('http://localhost:3000/api/user/profile', {
+        headers: {
+          Authorization: `Bearer ${token}` // 在请求头中传递JWT token
+        }
+      })
+
+      // 恢复用户登录状态
+      isLoggedIn.value = true
+      username.value = response.data.username
+      userAvatarUrl.value = response.data.avatarUrl ? `http://localhost:3000${response.data.avatarUrl}` : '/default_avatar.png'
+      localStorage.setItem('userId', response.data.id.toString())
+    } catch (error) {
+      console.error('自动登录失败:', error)
+      // 如果token无效或过期，清除它
+      localStorage.removeItem('token')
+    }
+  }
+
   map.value = new mapboxgl.Map({
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
@@ -184,13 +207,15 @@ const openAuthModal = () => {
 
 const handleLogin = (formData) => {
   console.log('MapComponent 收到登录数据:', formData)
-  if (formData && formData.username) {
+  if (formData && formData.user && formData.user.username) {
+    localStorage.setItem('token', formData.token)
     isLoggedIn.value = true
-    userAvatarUrl.value = formData.avatarUrl ? `http://localhost:3000${formData.avatarUrl}` : '/default_avatar.png'
-    username.value = formData.username
-    if (formData.id) {
-      localStorage.setItem('userId', formData.id.toString())
-      console.log('Stored userId:', formData.id)
+    userAvatarUrl.value = formData.user.avatarUrl ? `http://localhost:3000${formData.user.avatarUrl}` : '/default_avatar.png'
+    username.value = formData.user.username
+
+    if (formData.user.id) {
+      localStorage.setItem('userId', formData.user.id.toString())
+      console.log('Stored userId:', formData.user.id)
     } else {
       console.warn('Login successful but no user ID provided')
     }
@@ -215,6 +240,8 @@ const handleLogout = () => {
   isLoggedIn.value = false
   userAvatarUrl.value = ''
   username.value = ''
+  localStorage.removeItem('token') // 清除 token
+  localStorage.removeItem('userId') // 清除用户ID
   // 清除其他登录相关的数据
 }
 
@@ -224,7 +251,7 @@ const openUserProfile = () => {
 
 const updateUserData = (newData) => {
   username.value = newData.username
-  userAvatarUrl.value = newData.avatarUrl
+  userAvatarUrl.value = `http://localhost:3000/uploads/avatar/${newData.avatarUrl}`
   // 如果需要更新其他数据，也可以在这里添加
 }
 

@@ -31,6 +31,10 @@
             </el-form-item>
           </el-form>
         </div>
+        <div class="dialog-footer">
+          <el-button @click="discardChanges" :disabled="!isAvatarModified">取消</el-button>
+          <el-button type="primary" @click="confirmChanges" :disabled="!isAvatarModified">确认修改</el-button>
+        </div>
       </div>
     </el-dialog>
 
@@ -85,6 +89,7 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
+const isAvatarModified = ref(false) // 追踪头像是否修改过
 const cropperModal = ref(null)
 
 const open = async () => {
@@ -92,7 +97,7 @@ const open = async () => {
   const userId = localStorage.getItem('userId')
   if (userId) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/user/${userId}`)
+      const response = await axios.get(`${API_BASE_URL}/api/user/profile`)
       userForm.username = response.data.username
       userForm.email = response.data.email
       avatarUrl.value = `${API_BASE_URL}${response.data.avatarUrl}`
@@ -130,9 +135,40 @@ const beforeAvatarUpload = (file) => {
 }
 
 const handleAvatarUpdate = (newAvatarUrl) => {
-  avatarUrl.value = newAvatarUrl
-  userForm.avatarUrl = newAvatarUrl // 更新表单中的头像URL
-  emit('update:userData', { ...props.initialUserData, avatarUrl: newAvatarUrl })
+  avatarUrl.value = newAvatarUrl // 使用完整的URL
+  userForm.avatarUrl = newAvatarUrl.split('/').pop() // 仍然存储文件名用于后续操作
+  emit('update:userData', { ...props.initialUserData, avatarUrl: userForm.avatarUrl })
+  isAvatarModified.value = true
+}
+
+const confirmChanges = async () => {
+  const userId = localStorage.getItem('userId')
+  try {
+    const response = await axios.post(`${API_BASE_URL}/update-avatar`, {
+      userId,
+      newAvatar: userForm.avatarUrl // 新头像URL
+    })
+    if (response.data.avatarUrl) {
+      ElMessage.success('头像修改成功')
+      avatarUrl.value = response.data.avatarUrl
+      isAvatarModified.value = false // 重置修改标记
+    }
+  } catch (error) {
+    ElMessage.error('头像修改失败')
+  }
+}
+
+const discardChanges = async () => {
+  try {
+    await axios.post(`${API_BASE_URL}/delete-temp-avatar`, {
+      tempAvatarUrl: avatarUrl.value // 删除临时头像文件
+    })
+    avatarUrl.value = props.initialUserData.avatarUrl // 恢复为旧头像
+    userForm.avatarUrl = props.initialUserData.avatarUrl
+    isAvatarModified.value = false
+  } catch (error) {
+    ElMessage.error('取消修改失败')
+  }
 }
 
 const toggleUsernameEdit = async () => {

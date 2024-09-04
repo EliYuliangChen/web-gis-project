@@ -79,7 +79,7 @@ const handleSubmit = async () => {
     console.log('发送登录请求:', form.value)
     const response = await axios.post('http://localhost:3000/login', form.value)
     console.log('收到登录响应:', response.data)
-    if (response.data && response.data.username) {
+    if (response.data && response.data.user && response.data.user.username) {
       console.log('登录成功,发送数据:', response.data)
       emit('login', response.data)
       handleClose()
