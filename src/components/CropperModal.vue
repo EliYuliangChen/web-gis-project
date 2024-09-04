@@ -26,8 +26,8 @@ import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { ElMessage } from 'element-plus'
 
-const props = defineProps(['form', 'defaultAvatarUrl'])
-const emit = defineEmits(['updateAvatarUrl']) // 用于向父组件发送更新事件
+const props = defineProps(['form', 'defaultAvatarUrl', 'immediateUpdate']) // 增加 immediateUpdate
+const emit = defineEmits(['updateAvatarUrl', 'updateTempAvatarUrl']) // 增加 updateTempAvatarUrl 事件
 
 const isVisible = ref(false)
 const cropper = ref(null)
@@ -79,12 +79,19 @@ const saveCrop = () => {
       const fileName = `${timeStamp}.png` // 使用时间戳生成唯一文件名
       const formData = new FormData()
       formData.append('file', blob, fileName)
+
       axios.post('http://localhost:3000/upload-avatar', formData)
         .then(response => {
           ElMessage.success('头像裁剪并上传成功')
           isVisible.value = false
-          // 使用后端返回的路径进行更新
-          emit('updateAvatarUrl', `http://localhost:3000${response.data.tempAvatarUrl}`) // 通知父组件更新
+
+          // 如果 immediateUpdate 为 true，更新正式头像
+          if (props.immediateUpdate) {
+            emit('updateAvatarUrl', `http://localhost:3000${response.data.tempAvatarUrl}`)
+          } else {
+            // 暂时更新，等用户点击“确认修改”后再更新正式头像
+            emit('updateTempAvatarUrl', `http://localhost:3000${response.data.tempAvatarUrl}`)
+          }
         })
         .catch(error => {
           console.error('头像裁剪上传失败:', error)

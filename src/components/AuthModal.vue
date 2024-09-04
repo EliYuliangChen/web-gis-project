@@ -35,8 +35,14 @@
       </el-button>
       <el-button type="text" v-if="!isRegistering">忘记密码？</el-button>
     </div>
-    <CropperModal ref="cropperModal" :form="form" :defaultAvatarUrl="defaultAvatarUrl" @updateAvatarUrl="updateAvatarUrl" />
-  </el-dialog>
+    <CropperModal
+      ref="cropperModal"
+      :form="form"
+      :defaultAvatarUrl="defaultAvatarUrl"
+      :immediateUpdate="true"
+      @updateAvatarUrl="updateAvatarUrl"
+    />
+</el-dialog>
 </template>
 
 <script setup>
@@ -137,7 +143,7 @@ const handleAvatarSuccess = (response) => {
   // 删除当前用户之前上传的临时文件
   if (form.value.previousTempAvatarUrl) {
     const tempAvatarUrl = form.value.previousTempAvatarUrl.split('http://localhost:3000')[1]
-    axios.post('http://localhost:3000/delete-temp-avatar', { tempAvatarUrl })
+    axios.post('http://localhost:3000/delete-temp-avatar-unauth', { tempAvatarUrl })
       .then(() => {
         console.log('上一个临时头像删除成功')
       })
@@ -181,7 +187,14 @@ const open = () => {
 const handleClose = () => {
   if (form.value.avatarUrl && form.value.avatarUrl.includes('/uploads/temp/')) {
     const tempAvatarUrl = form.value.avatarUrl.split('http://localhost:3000')[1]
-    axios.post('http://localhost:3000/delete-temp-avatar', { tempAvatarUrl })
+    const token = localStorage.getItem('token')
+    const endpoint = token ? '/delete-temp-avatar' : '/delete-temp-avatar-unauth'
+
+    axios.post(`http://localhost:3000${endpoint}`, { tempAvatarUrl }, token
+      ? {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      : {})
       .then(() => {
         console.log('临时头像删除成功')
       })
@@ -191,7 +204,6 @@ const handleClose = () => {
   }
 
   form.value.previousTempAvatarUrl = ''
-
   resetForm()
   isVisible.value = false
   disconnectWebSocket()

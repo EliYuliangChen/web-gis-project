@@ -23,6 +23,7 @@
         ref="userProfileModal"
         :initial-user-data="{ username, email: userEmail, avatarUrl: userAvatarUrl }"
         @update:user-data="updateUserData"
+        @updateTempAvatarUrl="handleTempAvatarUpdate"
       />
     </el-header>
 
@@ -251,8 +252,12 @@ const openUserProfile = () => {
 
 const updateUserData = (newData) => {
   username.value = newData.username
-  userAvatarUrl.value = `http://localhost:3000/uploads/avatar/${newData.avatarUrl}`
+  userAvatarUrl.value = `http://localhost:3000${newData.avatarUrl}`
   // 如果需要更新其他数据，也可以在这里添加
+}
+
+const handleTempAvatarUpdate = (newTempAvatarUrl) => {
+  userAvatarUrl.value = newTempAvatarUrl // 暂时更新顶部栏头像
 }
 
 // const goToProfile = () => {
