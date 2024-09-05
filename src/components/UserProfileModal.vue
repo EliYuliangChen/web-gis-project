@@ -207,6 +207,9 @@ const toggleUsernameEdit = async () => {
       console.log('Update username response:', response.data)
       if (response.data.success) {
         ElMessage.success('用户名更新成功')
+        if (!avatarUrl.value.startsWith('http')) {
+          avatarUrl.value = `${API_BASE_URL}${avatarUrl.value}`
+        }
         emit('update:userData', { ...props.initialUserData, username: userForm.username })
         isEditingUsername.value = false
       }
@@ -234,8 +237,20 @@ const submitChangePassword = async () => {
     return
   }
 
+  const userId = localStorage.getItem('userId')
+  const token = localStorage.getItem('token')
+
   try {
-    const response = await axios.post('/api/change-password', passwordForm)
+    const response = await axios.post(`${API_BASE_URL}/api/change-password`,
+      {
+        userId,
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    )
     if (response.data.success) {
       ElMessage.success('密码修改成功')
       changePasswordVisible.value = false
@@ -244,7 +259,12 @@ const submitChangePassword = async () => {
       passwordForm.confirmPassword = ''
     }
   } catch (error) {
-    ElMessage.error('密码修改失败，请检查当前密码是否正确')
+    console.error('Error changing password:', error)
+    if (error.response && error.response.status === 401) {
+      ElMessage.error('当前密码不正确')
+    } else {
+      ElMessage.error('密码修改失败，请稍后重试')
+    }
   }
 }
 

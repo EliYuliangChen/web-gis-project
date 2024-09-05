@@ -87,6 +87,7 @@ const username = ref('') // 用户名
 
 const userProfileModal = ref(null)
 const userEmail = ref('') // 用户邮箱
+const API_BASE_URL = 'http://localhost:3000'
 
 const getEasternTime = () => {
   const options = { timeZone: 'America/New_York', hour: 'numeric', hour12: false }
@@ -252,7 +253,9 @@ const openUserProfile = () => {
 
 const updateUserData = (newData) => {
   username.value = newData.username
-  userAvatarUrl.value = `http://localhost:3000${newData.avatarUrl}`
+  userAvatarUrl.value = newData.avatarUrl.startsWith('http')
+    ? newData.avatarUrl
+    : `${API_BASE_URL}${newData.avatarUrl}`
   // 如果需要更新其他数据，也可以在这里添加
 }
 
