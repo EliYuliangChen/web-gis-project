@@ -10,6 +10,16 @@
       <el-form-item label="密码" prop="password">
         <el-input v-model="form.password" type="password" placeholder="请输入密码"></el-input>
       </el-form-item>
+      <el-form-item v-if="isRegistering" label="安全问题" prop="securityQuestion">
+        <el-select v-model="form.securityQuestion" placeholder="请选择安全问题">
+          <el-option label="你的第一只宠物的名字是什么？" value="pet"></el-option>
+          <el-option label="你最喜欢的电影是什么？" value="movie"></el-option>
+          <el-option label="你小时候住在哪条街？" value="street"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="isRegistering" label="安全问题答案" prop="securityAnswer">
+        <el-input v-model="form.securityAnswer" placeholder="请输入安全问题的答案"></el-input>
+      </el-form-item>
       <el-form-item v-if="isRegistering" label="头像" prop="avatar">
         <el-upload
           class="avatar-uploader"
@@ -29,11 +39,48 @@
         </el-button>
       </el-form-item>
     </el-form>
+    <el-dialog title="忘记密码" v-model="forgetPasswordVisible">
+      <el-steps :active="step" finish-status="success">
+        <el-step title="验证邮箱"></el-step>
+        <el-step title="验证安全问题"></el-step>
+        <el-step title="重置密码"></el-step>
+      </el-steps>
+
+      <el-form v-if="step === 0">
+        <el-form-item label="邮箱">
+          <el-input v-model="forgotEmail" placeholder="请输入您的注册邮箱"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleCheckEmail">下一步</el-button>
+          <p v-if="emailError" style="color:red;">{{ emailError }}</p>
+        </el-form-item>
+      </el-form>
+
+      <el-form v-if="step === 1">
+        <p>{{ securityQuestion }}</p> <!-- 显示安全问题 -->
+        <el-form-item label="答案">
+          <el-input v-model="answer" placeholder="请输入安全问题的答案"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleCheckAnswer">下一步</el-button>
+          <p v-if="answerError" style="color:red;">{{ answerError }}</p>
+        </el-form-item>
+      </el-form>
+
+      <el-form v-if="step === 2">
+        <el-form-item label="新密码">
+          <el-input type="password" v-model="newPassword" placeholder="请输入新密码"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleResetPassword">重置密码</el-button>
+        </el-form-item>
+      </el-form>
+    </el-dialog>
     <div class="auth-footer">
       <el-button type="text" @click="toggleRegistering">
         {{ isRegistering ? '已有账户？点击登录' : '创建新账户' }}
       </el-button>
-      <el-button type="text" v-if="!isRegistering">忘记密码？</el-button>
+      <el-button type="text" v-if="!isRegistering" @click="forgetPasswordVisible = true">忘记密码？</el-button>
     </div>
     <CropperModal
       ref="cropperModal"
@@ -59,6 +106,15 @@ const uploadKey = ref(Date.now())
 const cropperModal = ref(null)
 
 const emit = defineEmits(['login', 'register'])
+
+const forgetPasswordVisible = ref(false) // 控制忘记密码弹窗的显示
+const step = ref(0) // 当前步骤
+const forgotEmail = ref('') // 用户输入的邮箱
+const emailError = ref('') // 邮箱错误信息
+const securityQuestion = ref('') // 安全问题
+const answer = ref('') // 用户输入的安全问题答案
+const answerError = ref('') // 安全问题答案的错误信息
+const newPassword = ref('') // 用户输入的新密码
 
 const uploadAction = 'http://localhost:3000/upload-avatar'
 const defaultAvatarUrl = '/default_avatar.png'
@@ -111,6 +167,8 @@ const handleRegister = async () => {
         formData.append('username', form.value.username)
         formData.append('email', form.value.email)
         formData.append('password', form.value.password)
+        formData.append('securityQuestion', form.value.securityQuestion)
+        formData.append('securityAnswer', form.value.securityAnswer)
         if (form.value.avatarUrl && form.value.avatarUrl !== defaultAvatarUrl) {
           formData.append('avatar', form.value.avatarUrl.split('/uploads/temp/')[1])
         }
@@ -217,6 +275,50 @@ const resetForm = () => {
 const switchToLogin = () => {
   isRegistering.value = false
   resetForm()
+}
+
+const handleCheckEmail = async () => {
+  try {
+    const response = await axios.post('http://localhost:3000/api/check-email', { email: forgotEmail.value })
+    if (response.data.exists) {
+      securityQuestion.value = response.data.securityQuestion // 获取后端返回的安全问题
+      step.value = 1 // 进入下一步
+    } else {
+      emailError.value = '邮箱不存在或未注册'
+    }
+  } catch (error) {
+    console.error('检查邮箱错误:', error)
+    emailError.value = '检查邮箱错误'
+  }
+}
+
+// 处理安全问题回答
+const handleCheckAnswer = async () => {
+  try {
+    const response = await axios.post('http://localhost:3000/api/check-answer', { email: forgotEmail.value, answer: answer.value })
+    if (response.data.correct) {
+      step.value = 2 // 进入下一步
+    } else {
+      answerError.value = '安全问题答案错误'
+    }
+  } catch (error) {
+    console.error('验证安全问题答案错误:', error)
+    answerError.value = '验证安全问题答案错误'
+  }
+}
+
+// 处理重置密码
+const handleResetPassword = async () => {
+  try {
+    const response = await axios.post('http://localhost:3000/api/reset-password', { email: forgotEmail.value, newPassword: newPassword.value })
+    if (response.data.success) {
+      ElMessage.success('密码重置成功，请重新登录')
+      forgetPasswordVisible.value = false // 关闭弹窗
+      step.value = 0 // 重置步骤
+    }
+  } catch (error) {
+    console.error('重置密码错误:', error)
+  }
 }
 
 const connectWebSocket = () => {
