@@ -39,14 +39,16 @@
         <el-button @click="zoomIn" circle><el-icon><Plus /></el-icon></el-button>
         <el-button @click="zoomOut" circle><el-icon><Minus /></el-icon></el-button>
         <el-button @click="resetNorth" circle><el-icon><Aim /></el-icon></el-button>
-        <el-button @click="toggle3D" circle>
+        <el-button @click="enablePlaceMarkerMode" circle>放置点</el-button>
+        <el-button v-if="isPlacingMarker" @click="cancelPlaceMarkerMode" circle>取消</el-button>
+        <!-- <el-button @click="toggle3D" circle>
           <el-icon><component :is="is3DMode ? View : Discount" /></el-icon>
-        </el-button>
+        </el-button> -->
       </el-button-group>
     </div>
 
     <!-- Layer Control -->
-    <div class="layer-control">
+    <!-- <div class="layer-control">
       <el-dropdown>
         <el-button type="primary">
           图层控制<el-icon class="el-icon--right"><ArrowDown /></el-icon>
@@ -58,7 +60,7 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -72,14 +74,15 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import AuthModal from './AuthModal.vue'
 import UserProfileModal from './UserProfileModal.vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Minus, Aim, View, Discount, ArrowDown } from '@element-plus/icons-vue'
+import { Plus, Minus, Aim } from '@element-plus/icons-vue'
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiZWxpY2hlbiIsImEiOiJjbTBpbXlobDkwbm02Mm1xYW8wZDd6aTFrIn0.ZTjFhv29BHafPE_-v7Ng9g'
 
 const map = ref(null)
-const is3DMode = ref(false)
+// const is3DMode = ref(false)
 const isLoggedIn = ref(false)
 const authModal = ref(null)
+const isPlacingMarker = ref(false) // 是否处于放置标记模式
 const marker = ref(null) // 用于放置搜索结果标记
 
 const userAvatarUrl = ref('') // 用户头像URL
@@ -105,6 +108,27 @@ const updateMapLighting = () => {
     map.value.setConfigProperty('basemap', 'lightPreset', 'dusk')
   } else {
     map.value.setConfigProperty('basemap', 'lightPreset', 'night')
+  }
+}
+
+// 定义启用放置点功能
+const enablePlaceMarkerMode = () => {
+  isPlacingMarker.value = true
+}
+
+// 定义取消放置点功能
+const cancelPlaceMarkerMode = () => {
+  isPlacingMarker.value = false
+}
+
+// 定义点击地图时放置标记的逻辑
+const addMarkerAtClick = (e) => {
+  if (isPlacingMarker.value) {
+    if (marker.value) {
+      marker.value.remove() // 删除已有的点
+    }
+    marker.value = new mapboxgl.Marker().setLngLat(e.lngLat).addTo(map.value)
+    isPlacingMarker.value = false // 完成放置后退出放置模式
   }
 }
 
@@ -175,6 +199,9 @@ onMounted(async () => {
     })
   })
 
+  // 监听地图的点击事件
+  map.value.on('click', addMarkerAtClick)
+
   map.value.on('error', (e) => {
     console.error('Mapbox GL error:', e)
   })
@@ -184,24 +211,24 @@ const zoomIn = () => map.value.zoomIn()
 const zoomOut = () => map.value.zoomOut()
 const resetNorth = () => map.value.easeTo({ bearing: 0, pitch: 0 })
 
-const toggle3D = () => {
-  is3DMode.value = !is3DMode.value
-  map.value.easeTo({ pitch: is3DMode.value ? 60 : 0, duration: 1000 })
-}
+// const toggle3D = () => {
+//   is3DMode.value = !is3DMode.value
+//   map.value.easeTo({ pitch: is3DMode.value ? 60 : 0, duration: 1000 })
+// }
 
-const toggleLayer = (layer) => {
-  if (map.value.getLayer(layer)) {
-    const visibility = map.value.getLayoutProperty(layer, 'visibility')
-    map.value.setLayoutProperty(
-      layer,
-      'visibility',
-      visibility === 'visible' ? 'none' : 'visible'
-    )
-  } else {
-    console.warn(`Layer '${layer}' not found.`)
-  }
-  console.log('Layer visibility:', map.value.getLayoutProperty(layer, 'visibility'))
-}
+// const toggleLayer = (layer) => {
+//   if (map.value.getLayer(layer)) {
+//     const visibility = map.value.getLayoutProperty(layer, 'visibility')
+//     map.value.setLayoutProperty(
+//       layer,
+//       'visibility',
+//       visibility === 'visible' ? 'none' : 'visible'
+//     )
+//   } else {
+//     console.warn(`Layer '${layer}' not found.`)
+//   }
+//   console.log('Layer visibility:', map.value.getLayoutProperty(layer, 'visibility'))
+// }
 
 const openAuthModal = () => {
   authModal.value.open()
@@ -342,8 +369,8 @@ const handleTempAvatarUpdate = (newTempAvatarUrl) => {
 
 .map-controls {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
+  bottom: 50px;
+  left: 30px;
   z-index: 1;
 }
 
