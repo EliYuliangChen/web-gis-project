@@ -1,8 +1,9 @@
 <template>
-    <el-dialog v-model="isVisible" title="用户界面" width="600px" custom-class="user-profile-dialog">
-      <div class="user-profile-content">
-        <div class="user-avatar-section">
-          <el-avatar :size="150" :src="avatarUrl" />
+  <el-dialog v-model="isVisible" title="用户中心" width="700px" custom-class="user-profile-dialog">
+    <div class="user-profile-content">
+      <div class="user-avatar-section">
+        <el-avatar :size="180" :src="avatarUrl" />
+        <div class="avatar-actions">
           <el-button size="small" type="primary" @click="openCropper">更换头像</el-button>
           <el-upload
             class="avatar-uploader"
@@ -11,63 +12,68 @@
             :before-upload="beforeAvatarUpload"
             @change="handleFileChange"
           >
-            <el-button size="small" type="primary">上传图片</el-button>
+            <el-button size="small" type="info">上传图片</el-button>
           </el-upload>
         </div>
-        <div class="user-info-section">
-          <el-form :model="userForm" label-width="100px">
-            <el-form-item label="用户名">
-              <el-input v-model="userForm.username" :disabled="!isEditingUsername">
-                <template #append>
-                  <el-button @click="toggleUsernameEdit">{{ isEditingUsername ? '保存' : '编辑' }}</el-button>
-                </template>
-              </el-input>
-            </el-form-item>
-            <el-form-item label="邮箱">
-              <el-input v-model="userForm.email" disabled></el-input>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="changePassword">更改密码</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-        <div class="dialog-footer">
-          <el-button @click="discardChanges" :disabled="!isAvatarModified">取消</el-button>
-          <el-button type="primary" @click="confirmChanges" :disabled="!isAvatarModified">确认修改</el-button>
-        </div>
       </div>
-    </el-dialog>
+      <div class="user-info-section">
+        <el-form :model="userForm" label-width="80px">
+          <el-form-item label="用户名">
+            <el-input v-model="userForm.username" :disabled="!isEditingUsername">
+              <template #append>
+                <el-button @click="toggleUsernameEdit">{{ isEditingUsername ? '保存' : '编辑' }}</el-button>
+              </template>
+            </el-input>
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input v-model="userForm.email" disabled></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="changePassword">修改密码</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="discardChanges" :disabled="!isAvatarModified">取消</el-button>
+        <el-button type="primary" @click="confirmChanges" :disabled="!isAvatarModified">确认修改</el-button>
+      </span>
+    </template>
+  </el-dialog>
 
-    <!-- 更改密码对话框 -->
-    <el-dialog v-model="changePasswordVisible" title="更改密码" width="400px" append-to-body>
-      <el-form :model="passwordForm" label-width="100px">
-        <el-form-item label="当前密码" prop="currentPassword">
-          <el-input v-model="passwordForm.currentPassword" type="password"></el-input>
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="passwordForm.newPassword" type="password"></el-input>
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
-          <el-input v-model="passwordForm.confirmPassword" type="password"></el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="changePasswordVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitChangePassword">确认</el-button>
-        </span>
-      </template>
-    </el-dialog>
+  <!-- 更改密码对话框 -->
+  <el-dialog v-model="changePasswordVisible" title="修改密码" width="400px" append-to-body>
+    <el-form :model="passwordForm" label-width="100px">
+      <el-form-item label="当前密码" prop="currentPassword">
+        <el-input v-model="passwordForm.currentPassword" type="password"></el-input>
+      </el-form-item>
+      <el-form-item label="新密码" prop="newPassword">
+        <el-input v-model="passwordForm.newPassword" type="password"></el-input>
+      </el-form-item>
+      <el-form-item label="确认新密码" prop="confirmPassword">
+        <el-input v-model="passwordForm.confirmPassword" type="password"></el-input>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="changePasswordVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitChangePassword">确认</el-button>
+      </span>
+    </template>
+  </el-dialog>
 
-    <!-- 裁剪头像对话框 -->
-    <CropperModal
-      ref="cropperModal"
-      :form="userForm"
-      :defaultAvatarUrl="avatarUrl"
-      :immediateUpdate="false"
-      @updateTempAvatarUrl="handleTempAvatarUpdate"
-      @updateAvatarUrl="handleAvatarUpdate"
-    />
+  <!-- 裁剪头像对话框 -->
+  <CropperModal
+    ref="cropperModal"
+    :form="userForm"
+    :defaultAvatarUrl="avatarUrl"
+    :immediateUpdate="false"
+    @updateTempAvatarUrl="handleTempAvatarUpdate"
+    @updateAvatarUrl="handleAvatarUpdate"
+    dialogWidth="400px"
+    dialogHeight="400px"
+  />
 </template>
 
 <script setup>
@@ -271,24 +277,46 @@ const submitChangePassword = async () => {
 defineExpose({ open })
 </script>
 
-  <style scoped>
-  .user-profile-content {
-    display: flex;
-    justify-content: space-between;
-  }
+<style scoped>
+.user-profile-dialog :deep(.el-dialog__body) {
+  padding: 30px;
+}
 
-  .user-avatar-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 20px;
-  }
+.user-profile-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
 
-  .avatar-uploader {
-    margin-top: 20px;
-  }
+.user-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 40px;
+}
 
-  .user-info-section {
-    flex-grow: 1;
-  }
-  </style>
+.avatar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.avatar-actions .el-button {
+  margin-bottom: 10px;
+  width: 120px;
+}
+
+.user-info-section {
+  flex-grow: 1;
+}
+
+.user-info-section .el-form-item {
+  margin-bottom: 20px;
+}
+
+.dialog-footer {
+  text-align: right;
+  margin-top: 20px;
+}
+</style>

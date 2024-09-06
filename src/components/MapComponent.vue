@@ -113,7 +113,7 @@ onMounted(async () => {
   if (token) {
     try {
       // 使用JWT token请求用户信息
-      const response = await axios.get('http://localhost:3000/api/user/profile', {
+      const response = await axios.get(`${API_BASE_URL}/api/user/profile`, {
         headers: {
           Authorization: `Bearer ${token}` // 在请求头中传递JWT token
         }
@@ -122,7 +122,7 @@ onMounted(async () => {
       // 恢复用户登录状态
       isLoggedIn.value = true
       username.value = response.data.username
-      userAvatarUrl.value = response.data.avatarUrl ? `http://localhost:3000${response.data.avatarUrl}` : '/default_avatar.png'
+      userAvatarUrl.value = response.data.avatarUrl ? `${API_BASE_URL}${response.data.avatarUrl}` : '/default_avatar.png'
       localStorage.setItem('userId', response.data.id.toString())
     } catch (error) {
       console.error('自动登录失败:', error)
@@ -212,7 +212,7 @@ const handleLogin = (formData) => {
   if (formData && formData.user && formData.user.username) {
     localStorage.setItem('token', formData.token)
     isLoggedIn.value = true
-    userAvatarUrl.value = formData.user.avatarUrl ? `http://localhost:3000${formData.user.avatarUrl}` : '/default_avatar.png'
+    userAvatarUrl.value = formData.user.avatarUrl ? `${API_BASE_URL}${formData.user.avatarUrl}` : '/default_avatar.png'
     username.value = formData.user.username
 
     if (formData.user.id) {

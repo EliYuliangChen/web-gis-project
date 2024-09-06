@@ -1,5 +1,5 @@
 <template>
-    <el-dialog v-model="isVisible" title="裁剪头像" width="600px" @close="handleClose">
+    <el-dialog v-model="isVisible" title="裁剪头像" :width="dialogWidth" :height="dialogHeight" @close="handleClose">
       <div>
         <el-upload
             class="avatar-uploader"
@@ -51,7 +51,7 @@ const handleClose = () => {
 const cancelCrop = () => {
   isVisible.value = false
   localAvatarUrl.value = props.defaultAvatarUrl // 恢复默认头像
-  emit('updateAvatarUrl', localAvatarUrl.value) // 通知父组件更新
+  // emit('updateAvatarUrl', localAvatarUrl.value) // 通知父组件更新
 }
 
 const beforeAvatarUpload = (file) => {
