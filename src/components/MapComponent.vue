@@ -33,14 +33,24 @@
     <!-- 地理搜索框 -->
     <div id="geocoder" class="geocoder"></div>
 
+    <div class="marker-controls">
+      <el-button v-if="!isPlacingMarker" @click="enablePlaceMarkerMode" class="is-circle">
+        <el-icon><Place /></el-icon>
+      </el-button>
+      <el-button v-if="isPlacingMarker" @click="cancelPlaceMarkerMode" class="is-circle">
+        <el-icon><Close /></el-icon>
+      </el-button>
+      <el-button v-if="marker" @click="clearMarker" class="is-circle">
+        <el-icon><Delete /></el-icon>
+      </el-button>
+    </div>
+
     <!-- Map Controls -->
     <div class="map-controls">
       <el-button-group>
         <el-button @click="zoomIn" circle><el-icon><Plus /></el-icon></el-button>
         <el-button @click="zoomOut" circle><el-icon><Minus /></el-icon></el-button>
         <el-button @click="resetNorth" circle><el-icon><Aim /></el-icon></el-button>
-        <el-button @click="enablePlaceMarkerMode" circle>放置点</el-button>
-        <el-button v-if="isPlacingMarker" @click="cancelPlaceMarkerMode" circle>取消</el-button>
         <!-- <el-button @click="toggle3D" circle>
           <el-icon><component :is="is3DMode ? View : Discount" /></el-icon>
         </el-button> -->
@@ -129,6 +139,14 @@ const addMarkerAtClick = (e) => {
     }
     marker.value = new mapboxgl.Marker().setLngLat(e.lngLat).addTo(map.value)
     isPlacingMarker.value = false // 完成放置后退出放置模式
+  }
+}
+
+// 清除地图上的当前标记
+const clearMarker = () => {
+  if (marker.value) {
+    marker.value.remove() // 移除地图上的标记
+    marker.value = null // 重置标记
   }
 }
 
@@ -365,6 +383,43 @@ const handleTempAvatarUpdate = (newTempAvatarUrl) => {
   background-color: #556B2F; /* 草木灰绿色 */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 添加阴影效果 */
   color: #ffffff; /* 白色的字体颜色 */
+}
+
+.marker-controls {
+  position: absolute;
+  top: 160px; /* 放置在搜索框的下面 */
+  left: 30px; /* 与搜索框对齐 */
+  display: flex;
+  flex-direction: column; /* 竖着排列按钮 */
+  gap: 10px; /* 按钮之间的间距 */
+  align-items: flex-start;
+  z-index: 3;
+}
+
+.marker-controls .el-button.is-circle {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0 12px 0 0; /* 只设置右边距 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* background-color: rgba(255, 255, 255, 0.8); */
+  border: none; /* 移除边框 */
+  /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
+}
+
+.marker-controls .el-button.is-circle .el-icon {
+  font-size: 20px;
+  color: #409EFF; /* Element Plus 默认主色 */
+}
+
+.el-button {
+  margin: 0; /* 清除所有按钮的margin */
+  padding: 0; /* 清除所有按钮的padding */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .map-controls {
