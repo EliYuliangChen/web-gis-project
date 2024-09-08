@@ -45,6 +45,12 @@
       </el-button>
     </div>
 
+    <MarkerForm
+      :visible="showMarkerForm"
+      @close="handleFormClose"
+      @submit="handleFormSubmit"
+    />
+
     <!-- Map Controls -->
     <div class="map-controls">
       <el-button-group>
@@ -83,6 +89,7 @@ import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import AuthModal from './AuthModal.vue'
 import UserProfileModal from './UserProfileModal.vue'
+import MarkerForm from './MarkerForm.vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Minus, Aim } from '@element-plus/icons-vue'
 
@@ -94,6 +101,7 @@ const isLoggedIn = ref(false)
 const authModal = ref(null)
 const isPlacingMarker = ref(false) // 是否处于放置标记模式
 const marker = ref(null) // 用于放置搜索结果标记
+const showMarkerForm = ref(false) // 是否显示标记表单
 
 const userAvatarUrl = ref('') // 用户头像URL
 const username = ref('') // 用户名
@@ -129,6 +137,7 @@ const enablePlaceMarkerMode = () => {
 // 定义取消放置点功能
 const cancelPlaceMarkerMode = () => {
   isPlacingMarker.value = false
+  // showMarkerForm.value = false // 隐藏表单
 }
 
 // 定义点击地图时放置标记的逻辑
@@ -139,6 +148,7 @@ const addMarkerAtClick = (e) => {
     }
     marker.value = new mapboxgl.Marker().setLngLat(e.lngLat).addTo(map.value)
     isPlacingMarker.value = false // 完成放置后退出放置模式
+    showMarkerForm.value = true // 显示表单
   }
 }
 
@@ -148,6 +158,19 @@ const clearMarker = () => {
     marker.value.remove() // 移除地图上的标记
     marker.value = null // 重置标记
   }
+  showMarkerForm.value = false // 隐藏表单
+  isPlacingMarker.value = false // 重置为添加按钮状态
+}
+
+const handleFormClose = () => {
+  showMarkerForm.value = false
+  // 保持 marker 不变
+}
+
+const handleFormSubmit = (formData) => {
+  console.log('Form submitted:', formData)
+  // 这里可以处理表单提交，例如将数据保存到数据库
+  showMarkerForm.value = false
 }
 
 onMounted(async () => {
@@ -393,7 +416,7 @@ const handleTempAvatarUpdate = (newTempAvatarUrl) => {
   flex-direction: column; /* 竖着排列按钮 */
   gap: 10px; /* 按钮之间的间距 */
   align-items: flex-start;
-  z-index: 3;
+  z-index: 1001;
 }
 
 .marker-controls .el-button.is-circle {
