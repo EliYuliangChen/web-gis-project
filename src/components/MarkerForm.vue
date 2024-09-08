@@ -36,12 +36,13 @@
   </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch } from 'vue'
+import { ref, defineProps, defineEmits, watch, watchEffect } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
-  visible: Boolean
+  visible: Boolean,
+  initialImage: String
 })
 
 const emit = defineEmits(['close', 'submit'])
@@ -53,6 +54,12 @@ const form = ref({
   description: ''
 })
 
+watchEffect(() => {
+  if (props.visible && props.initialImage) {
+    form.value.imageUrl = props.initialImage
+  }
+})
+
 watch(() => props.visible, (newVisible) => {
   if (newVisible) {
     form.value = {
@@ -61,6 +68,12 @@ watch(() => props.visible, (newVisible) => {
       imageUrl: '',
       description: ''
     }
+  }
+})
+
+watch(() => props.initialImage, (newImage) => {
+  if (newImage) {
+    form.value.imageUrl = newImage
   }
 })
 
@@ -94,11 +107,11 @@ const handleImageSuccess = (res, file) => {
 }
 
 const beforeImageUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg'
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isJPG) {
-    ElMessage.error('上传头像图片只能是 JPG 格式!')
+    ElMessage.error('头像图片必须是 JPG 或 PNG 格式!')
   }
   if (!isLt2M) {
     ElMessage.error('上传头像图片大小不能超过 2MB!')

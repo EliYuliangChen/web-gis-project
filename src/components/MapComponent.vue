@@ -34,6 +34,9 @@
     <div id="geocoder" class="geocoder"></div>
 
     <div class="marker-controls">
+      <el-button @click="openUploadDialog" class="is-circle">
+        <el-icon><Upload /></el-icon>
+      </el-button>
       <el-button v-if="!isPlacingMarker" @click="enablePlaceMarkerMode" class="is-circle">
         <el-icon><Place /></el-icon>
       </el-button>
@@ -49,6 +52,13 @@
       :visible="showMarkerForm"
       @close="handleFormClose"
       @submit="handleFormSubmit"
+      :initialImage="uploadedImage"
+    />
+
+    <UploadImageDialog
+      :visible="showUploadDialog"
+      @close="handleUploadDialogClose"
+      @submit="handleImageUpload"
     />
 
     <!-- Map Controls -->
@@ -90,6 +100,7 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'
 import AuthModal from './AuthModal.vue'
 import UserProfileModal from './UserProfileModal.vue'
 import MarkerForm from './MarkerForm.vue'
+import UploadImageDialog from './UploadImageDialog.vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Minus, Aim } from '@element-plus/icons-vue'
 
@@ -102,6 +113,8 @@ const authModal = ref(null)
 const isPlacingMarker = ref(false) // 是否处于放置标记模式
 const marker = ref(null) // 用于放置搜索结果标记
 const showMarkerForm = ref(false) // 是否显示标记表单
+const showUploadDialog = ref(false) // 是否显示上传图片对话框
+const uploadedImage = ref(null) // 上传的图片
 
 const userAvatarUrl = ref('') // 用户头像URL
 const username = ref('') // 用户名
@@ -171,6 +184,56 @@ const handleFormSubmit = (formData) => {
   console.log('Form submitted:', formData)
   // 这里可以处理表单提交，例如将数据保存到数据库
   showMarkerForm.value = false
+}
+
+const openUploadDialog = () => {
+  showUploadDialog.value = true
+}
+
+const handleUploadDialogClose = () => {
+  showUploadDialog.value = false
+}
+
+const handleImageUpload = async (imageFile) => {
+  try {
+    const result = await analyzeImage(imageFile)
+    if (result.success) {
+      const { lat, lng } = result.coordinates
+      uploadedImage.value = URL.createObjectURL(imageFile) // 先设置图片
+      addMarkerAtCoordinates(lat, lng)
+      map.value.flyTo({ center: [lng, lat], zoom: 15 })
+      showMarkerForm.value = true // 然后显示表单
+    } else {
+      ElMessage.error('无法分析图片中的位置信息')
+    }
+  } catch (error) {
+    console.error('Image analysis failed:', error)
+    ElMessage.error('图片分析失败')
+  } finally {
+    showUploadDialog.value = false // 关闭上传对话框
+  }
+}
+
+const analyzeImage = async (imageFile) => {
+  // 模拟图片分析过程
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // 这里应该是实际的图片分析逻辑
+      resolve({
+        success: true,
+        coordinates: { lat: 40.7128, lng: -74.0060 } // 示例坐标
+      })
+    }, 2000) // 模拟2秒的分析时间
+  })
+}
+
+const addMarkerAtCoordinates = (lat, lng) => {
+  if (marker.value) {
+    marker.value.remove()
+  }
+  marker.value = new mapboxgl.Marker()
+    .setLngLat([lng, lat])
+    .addTo(map.value)
 }
 
 onMounted(async () => {
