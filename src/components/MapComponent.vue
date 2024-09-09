@@ -121,7 +121,7 @@ const username = ref('') // 用户名
 
 const userProfileModal = ref(null)
 const userEmail = ref('') // 用户邮箱
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://192.168.68.103:3000'
 
 const getEasternTime = () => {
   const options = { timeZone: 'America/New_York', hour: 'numeric', hour12: false }

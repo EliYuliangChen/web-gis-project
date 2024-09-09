@@ -135,7 +135,7 @@ const handleSubmit = async () => {
   try {
     await authForm.value.validate()
     console.log('发送登录请求:', form.value)
-    const response = await axios.post('http://localhost:3000/login', form.value)
+    const response = await axios.post('http://192.168.68.103:3000/login', form.value)
     console.log('收到登录响应:', response.data)
     if (response.data && response.data.user && response.data.user.username) {
       console.log('登录成功,发送数据:', response.data)
@@ -200,7 +200,7 @@ const handleRegister = async () => {
         formData.append('avatar', form.value.avatarFile)
       }
 
-      const response = await axios.post('http://localhost:3000/register', formData, {
+      const response = await axios.post('http://192.168.68.103:3000/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
@@ -279,7 +279,7 @@ const switchToLogin = () => {
 
 const handleCheckEmail = async () => {
   try {
-    const response = await axios.post('http://localhost:3000/api/check-email', { email: forgotEmail.value })
+    const response = await axios.post('http://192.168.68.103:3000/api/check-email', { email: forgotEmail.value })
     if (response.data.exists) {
       securityQuestion.value = response.data.securityQuestion // 获取后端返回的安全问题
       step.value = 1 // 进入下一步
@@ -295,7 +295,7 @@ const handleCheckEmail = async () => {
 // 处理安全问题回答
 const handleCheckAnswer = async () => {
   try {
-    const response = await axios.post('http://localhost:3000/api/check-answer', { email: forgotEmail.value, answer: answer.value })
+    const response = await axios.post('http://192.168.68.103:3000/api/check-answer', { email: forgotEmail.value, answer: answer.value })
     if (response.data.correct) {
       step.value = 2 // 进入下一步
     } else {
@@ -310,7 +310,7 @@ const handleCheckAnswer = async () => {
 // 处理重置密码
 const handleResetPassword = async () => {
   try {
-    const response = await axios.post('http://localhost:3000/api/reset-password', { email: forgotEmail.value, newPassword: newPassword.value })
+    const response = await axios.post('http://192.168.68.103:3000/api/reset-password', { email: forgotEmail.value, newPassword: newPassword.value })
     if (response.data.success) {
       ElMessage.success('密码重置成功，请重新登录')
       forgetPasswordVisible.value = false // 关闭弹窗
@@ -322,7 +322,7 @@ const handleResetPassword = async () => {
 }
 
 const connectWebSocket = () => {
-  ws.value = new WebSocket('ws://localhost:3000')
+  ws.value = new WebSocket('ws://192.168.68.103:3000')
 
   ws.value.onmessage = (event) => {
     const data = JSON.parse(event.data)

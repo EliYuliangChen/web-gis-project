@@ -87,7 +87,7 @@ import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import CropperModal from './CropperModal.vue'
 
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://192.168.68.103:3000'
 
 const props = defineProps(['initialUserData'])
 const emit = defineEmits(['update:userData'])
