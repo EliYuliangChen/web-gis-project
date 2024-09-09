@@ -7,10 +7,10 @@
           <el-button size="small" type="primary" @click="openCropper">更换头像</el-button>
           <el-upload
             class="avatar-uploader"
-            :action="uploadAction"
+            :auto-upload="false"
             :show-file-list="false"
+            :on-change="handleFileChange"
             :before-upload="beforeAvatarUpload"
-            @change="handleFileChange"
           >
             <el-button size="small" type="info">上传图片</el-button>
           </el-upload>
@@ -64,7 +64,7 @@
   </el-dialog>
 
   <!-- 裁剪头像对话框 -->
-  <CropperModal
+  <!-- <CropperModal
     ref="cropperModal"
     :form="userForm"
     :defaultAvatarUrl="avatarUrl"
@@ -73,6 +73,11 @@
     @updateAvatarUrl="handleAvatarUpdate"
     dialogWidth="400px"
     dialogHeight="400px"
+  /> -->
+  <CropperModal
+    ref="cropperModal"
+    :defaultAvatarUrl="avatarUrl"
+    @updateAvatarFile="handleAvatarUpdate"
   />
 </template>
 
@@ -80,7 +85,7 @@
 import { ref, reactive, defineEmits, defineExpose, defineProps } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
-import CropperModal from './CropperModal.vue' // 引入裁剪组件
+import CropperModal from './CropperModal.vue'
 
 const API_BASE_URL = 'http://localhost:3000'
 
@@ -92,7 +97,7 @@ const avatarUrl = ref(props.initialUserData.avatarUrl)
 const userForm = reactive({
   username: props.initialUserData.username,
   email: props.initialUserData.email,
-  avatarUrl: props.initialUserData.avatarUrl
+  avatarFile: null
 })
 const isEditingUsername = ref(false)
 const changePasswordVisible = ref(false)
@@ -102,9 +107,8 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
-const isAvatarModified = ref(false) // 追踪头像是否修改过
+const isAvatarModified = ref(false)
 const cropperModal = ref(null)
-const uploadAction = ref(`${API_BASE_URL}/upload-avatar`)
 
 const open = async () => {
   isVisible.value = true
@@ -128,59 +132,56 @@ const openCropper = () => {
 }
 
 const handleFileChange = (file) => {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    cropperModal.value.show(e.target.result)
+  const isValid = beforeAvatarUpload(file.raw)
+  if (isValid) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      cropperModal.value.show(e.target.result)
+    }
+    reader.readAsDataURL(file.raw)
   }
-  reader.readAsDataURL(file.raw)
 }
 
 const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isJPG = file.type === 'image/jpeg'
+  const isPNG = file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
 
-  if (!isJPG) {
+  if (!isJPG && !isPNG) {
     ElMessage.error('头像图片必须是 JPG 或 PNG 格式!')
+    return false
   }
   if (!isLt2M) {
     ElMessage.error('头像图片大小不能超过 2MB!')
+    return false
   }
-  return isJPG && isLt2M
+  return true
 }
 
-const handleAvatarUpdate = (newAvatarUrl) => {
-  // 确保我们只使用文件名
-  const fileName = newAvatarUrl.split('/').pop()
-  avatarUrl.value = `${API_BASE_URL}/uploads/avatar/${fileName}`
-  userForm.avatarUrl = fileName
-  emit('update:userData', { ...props.initialUserData, avatarUrl: fileName })
+const handleAvatarUpdate = (file) => {
+  userForm.avatarFile = file
+  avatarUrl.value = URL.createObjectURL(file)
   isAvatarModified.value = true
   console.log('Updated avatarUrl:', avatarUrl.value)
-  console.log('Updated userForm.avatarUrl:', userForm.avatarUrl)
-}
-
-const handleTempAvatarUpdate = (newTempAvatarUrl) => {
-  // 确保我们只使用文件名
-  const fileName = newTempAvatarUrl.split('/').pop()
-  avatarUrl.value = `${API_BASE_URL}/uploads/temp/${fileName}`
-  userForm.avatarUrl = fileName
-  isAvatarModified.value = true
-  console.log('Updated avatarUrl:', avatarUrl.value)
-  console.log('Updated userForm.avatarUrl:', userForm.avatarUrl)
 }
 
 const confirmChanges = async () => {
   const userId = localStorage.getItem('userId')
   try {
-    const response = await axios.post(`${API_BASE_URL}/update-avatar`, {
-      userId,
-      newAvatar: userForm.avatarUrl // 提交新的正式头像
+    const formData = new FormData()
+    formData.append('userId', userId)
+    if (userForm.avatarFile) {
+      formData.append('avatar', userForm.avatarFile)
+    }
+
+    const response = await axios.post(`${API_BASE_URL}/update-avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
-    console.log('newAvatar:', userForm.avatarUrl)
+
     if (response.data.avatarUrl) {
       ElMessage.success('头像修改成功')
       emit('update:userData', { ...props.initialUserData, avatarUrl: response.data.avatarUrl })
-      isAvatarModified.value = false // 重置修改标记
+      isAvatarModified.value = false
       isVisible.value = false
     }
   } catch (error) {
@@ -188,17 +189,10 @@ const confirmChanges = async () => {
   }
 }
 
-const discardChanges = async () => {
-  try {
-    await axios.post(`${API_BASE_URL}/delete-temp-avatar`, {
-      tempAvatarUrl: avatarUrl.value // 删除临时头像文件
-    })
-    avatarUrl.value = props.initialUserData.avatarUrl // 恢复为旧头像
-    userForm.avatarUrl = props.initialUserData.avatarUrl
-    isAvatarModified.value = false
-  } catch (error) {
-    ElMessage.error('取消修改失败')
-  }
+const discardChanges = () => {
+  avatarUrl.value = props.initialUserData.avatarUrl
+  userForm.avatarFile = null
+  isAvatarModified.value = false
 }
 
 const toggleUsernameEdit = async () => {

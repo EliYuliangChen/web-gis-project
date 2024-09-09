@@ -23,11 +23,9 @@
       <el-form-item v-if="isRegistering" label="头像" prop="avatar">
         <el-upload
           class="avatar-uploader"
-          :action="uploadAction"
+          :auto-upload="false"
           :show-file-list="false"
-          :on-success="handleAvatarSuccess"
-          :before-upload="beforeAvatarUpload"
-          :key="uploadKey"
+          :on-change="handleAvatarChange"
         >
           <img v-if="form.avatarUrl" :src="form.avatarUrl" class="avatar" />
           <img v-else :src="defaultAvatarUrl" class="avatar" />
@@ -84,12 +82,10 @@
     </div>
     <CropperModal
       ref="cropperModal"
-      :form="form"
       :defaultAvatarUrl="defaultAvatarUrl"
-      :immediateUpdate="true"
-      @updateAvatarUrl="updateAvatarUrl"
+      @updateAvatarFile="updateAvatarFile"
     />
-</el-dialog>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -100,7 +96,7 @@ import CropperModal from './CropperModal.vue'
 
 const isVisible = ref(false)
 const isRegistering = ref(false)
-const form = ref({ username: '', email: '', password: '', avatarUrl: '', previousTempAvatarUrl: '' })
+const form = ref({ username: '', email: '', password: '', avatarUrl: '', avatarFile: null })
 const authForm = ref(null)
 const uploadKey = ref(Date.now())
 const cropperModal = ref(null)
@@ -116,7 +112,7 @@ const answer = ref('') // 用户输入的安全问题答案
 const answerError = ref('') // 安全问题答案的错误信息
 const newPassword = ref('') // 用户输入的新密码
 
-const uploadAction = 'http://localhost:3000/upload-avatar'
+// const uploadAction = 'http://localhost:3000/upload-avatar'
 const defaultAvatarUrl = '/default_avatar.png'
 
 const ws = ref(null)
@@ -159,36 +155,65 @@ const handleSubmit = async () => {
   }
 }
 
+const handleAvatarChange = (file) => {
+  const isJPG = file.raw.type === 'image/jpeg'
+  const isPNG = file.raw.type === 'image/png'
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+
+  if (!isJPG && !isPNG) {
+    ElMessage.error('头像必须是 JPG 或 PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('头像大小不能超过 2MB!')
+    return false
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    form.value.avatarUrl = e.target.result
+    cropperModal.value.show(e.target.result)
+  }
+  reader.readAsDataURL(file.raw)
+}
+
+const updateAvatarFile = (file) => {
+  if (file) {
+    form.value.avatarFile = file
+    form.value.avatarUrl = URL.createObjectURL(file)
+  } else {
+    form.value.avatarFile = null
+    form.value.avatarUrl = defaultAvatarUrl // 恢复默认头像
+  }
+}
+
 const handleRegister = async () => {
-  authForm.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        const formData = new FormData()
-        formData.append('username', form.value.username)
-        formData.append('email', form.value.email)
-        formData.append('password', form.value.password)
-        formData.append('securityQuestion', form.value.securityQuestion)
-        formData.append('securityAnswer', form.value.securityAnswer)
-        if (form.value.avatarUrl && form.value.avatarUrl !== defaultAvatarUrl) {
-          formData.append('avatar', form.value.avatarUrl.split('/uploads/temp/')[1])
-        }
-
-        const response = await axios.post('http://localhost:3000/register', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
-
-        emit('register', response.data.message)
-        isRegistering.value = false
-        resetForm()
-        // handleClose()
-      } catch (error) {
-        ElMessage.error({
-          message: error.response?.data?.message || '注册失败，请稍后再试',
-          duration: 5000
-        })
+  if (await authForm.value.validate()) {
+    try {
+      const formData = new FormData()
+      formData.append('username', form.value.username)
+      formData.append('email', form.value.email)
+      formData.append('password', form.value.password)
+      formData.append('securityQuestion', form.value.securityQuestion)
+      formData.append('securityAnswer', form.value.securityAnswer)
+      if (form.value.avatarFile) {
+        formData.append('avatar', form.value.avatarFile)
       }
+
+      const response = await axios.post('http://localhost:3000/register', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      emit('register', response.data.message)
+      isRegistering.value = false
+      resetForm()
+    } catch (error) {
+      ElMessage.error({
+        message: error.response?.data?.message || '注册失败，请稍后再试',
+        duration: 5000
+      })
     }
-  })
+  }
 }
 
 const toggleRegistering = () => {
@@ -197,45 +222,30 @@ const toggleRegistering = () => {
   resetForm()
 }
 
-const handleAvatarSuccess = (response) => {
-  // 删除当前用户之前上传的临时文件
-  if (form.value.previousTempAvatarUrl) {
-    const tempAvatarUrl = form.value.previousTempAvatarUrl.split('http://localhost:3000')[1]
-    axios.post('http://localhost:3000/delete-temp-avatar-unauth', { tempAvatarUrl })
-      .then(() => {
-        console.log('上一个临时头像删除成功')
-      })
-      .catch((error) => {
-        console.error('删除上一个临时头像时出错:', error)
-      })
-  }
+// const handleAvatarSuccess = (response, file) => {
+//   // 使用 file.raw，它是原始的 File 对象
+//   const localUrl = URL.createObjectURL(file.raw)
+//   form.value.avatarUrl = localUrl
+//   form.value.avatarFile = file.raw // 保存文件对象以便后续上传
+//   cropperModal.value.show(localUrl) // 显示裁剪窗口
+// }
 
-  // 更新form中的头像URL和临时文件URL
-  if (response.tempAvatarUrl) {
-    form.value.avatarUrl = `http://localhost:3000${response.tempAvatarUrl}`
-    form.value.previousTempAvatarUrl = form.value.avatarUrl // 记录新上传的临时文件
-    cropperModal.value.show(form.value.avatarUrl) // 显示裁剪窗口
-  } else {
-    console.error('Failed to get tempAvatarUrl from the response:', response)
-  }
-}
+// const beforeAvatarUpload = (file) => {
+//   const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+//   const isLt2M = file.size / 1024 / 1024 < 2
 
-const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+//   if (!isJPG) {
+//     ElMessage.error('头像必须是 JPG 或 PNG 格式!')
+//   }
+//   if (!isLt2M) {
+//     ElMessage.error('头像大小不能超过 2MB!')
+//   }
+//   return isJPG && isLt2M
+// }
 
-  if (!isJPG) {
-    ElMessage.error('头像必须是 JPG 或 PNG 格式!')
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
-  }
-  return isJPG && isLt2M
-}
-
-const updateAvatarUrl = (newAvatarUrl) => {
-  form.value.avatarUrl = newAvatarUrl
-}
+// const updateAvatarUrl = (newAvatarUrl) => {
+//   form.value.avatarUrl = newAvatarUrl
+// }
 
 const open = () => {
   isVisible.value = true
@@ -243,34 +253,24 @@ const open = () => {
 }
 
 const handleClose = () => {
-  if (form.value.avatarUrl && form.value.avatarUrl.includes('/uploads/temp/')) {
-    const tempAvatarUrl = form.value.avatarUrl.split('http://localhost:3000')[1]
-    const token = localStorage.getItem('token')
-    const endpoint = token ? '/delete-temp-avatar' : '/delete-temp-avatar-unauth'
-
-    axios.post(`http://localhost:3000${endpoint}`, { tempAvatarUrl }, token
-      ? {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      : {})
-      .then(() => {
-        console.log('临时头像删除成功')
-      })
-      .catch((error) => {
-        console.error('删除临时头像时出错:', error)
-      })
-  }
-
-  form.value.previousTempAvatarUrl = ''
   resetForm()
   isVisible.value = false
-  disconnectWebSocket()
 }
 
 const resetForm = () => {
-  form.value = { username: '', email: '', password: '', avatarUrl: defaultAvatarUrl }
-  uploadKey.value = Date.now() // 强制重置上传状态
+  if (form.value.avatarUrl && form.value.avatarUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(form.value.avatarUrl)
+  }
+  form.value = { username: '', email: '', password: '', avatarUrl: defaultAvatarUrl, avatarFile: null }
 }
+
+// const resetForm = () => {
+//   if (form.value.avatarUrl && form.value.avatarUrl.startsWith('blob:')) {
+//     URL.revokeObjectURL(form.value.avatarUrl)
+//   }
+//   form.value = { username: '', email: '', password: '', avatarUrl: defaultAvatarUrl, avatarFile: null }
+//   uploadKey.value = Date.now()
+// }
 
 const switchToLogin = () => {
   isRegistering.value = false

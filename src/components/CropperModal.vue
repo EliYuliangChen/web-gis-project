@@ -1,107 +1,70 @@
 <template>
-    <el-dialog v-model="isVisible" title="裁剪头像" :width="dialogWidth" :height="dialogHeight" @close="handleClose">
-      <div>
-        <el-upload
-            class="avatar-uploader"
-            :action="null"
-            :show-file-list="false"
-            :before-upload="beforeAvatarUpload"
-            @change="handleFileChange"
-        >
-        </el-upload>
-        <img ref="cropperImage" :src="imageUrl" alt="Avatar link is lost, please refresh the page or upload again" style="max-width: 100%;">
-        <!-- <div class="cropper-overlay"></div> -->
-      </div>
-      <div class="dialog-footer">
-        <el-button @click="cancelCrop">取消</el-button>
-        <el-button type="primary" @click="saveCrop">保存</el-button>
-      </div>
-    </el-dialog>
-  </template>
+  <el-dialog v-model="isVisible" title="裁剪头像" width="400px" height="400px" @close="handleClose">
+    <div>
+      <img ref="cropperImage" :src="imageUrl" alt="Avatar link is lost, please refresh the page or upload again" style="max-width: 100%;">
+    </div>
+    <div class="dialog-footer">
+      <el-button @click="cancelCrop">取消</el-button>
+      <el-button type="primary" @click="saveCrop">保存</el-button>
+    </div>
+  </el-dialog>
+</template>
 
 <script setup>
-import { ref, nextTick, watch, onMounted, defineExpose, defineProps, defineEmits } from 'vue'
-import axios from 'axios'
+import { ref, nextTick, watch, onMounted, defineExpose, defineEmits } from 'vue'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { ElMessage } from 'element-plus'
 
-const props = defineProps(['form', 'defaultAvatarUrl', 'immediateUpdate']) // 增加 immediateUpdate
-const emit = defineEmits(['updateAvatarUrl', 'updateTempAvatarUrl']) // 增加 updateTempAvatarUrl 事件
+// const props = defineProps(['defaultAvatarUrl'])
+const emit = defineEmits(['updateAvatarFile'])
 
 const isVisible = ref(false)
 const cropper = ref(null)
 const imageUrl = ref('')
 const cropperImage = ref(null)
-const localAvatarUrl = ref(props.form.avatarUrl)
 
 const show = (url) => {
+  console.log('CropperModal: show called with URL:', url)
   imageUrl.value = url
   isVisible.value = true
 }
 
 const handleClose = () => {
+  console.log('CropperModal: handleClose called')
   if (cropper.value) {
     cropper.value.destroy()
     cropper.value = null
   }
-  imageUrl.value = '' // 清空图片路径
+  imageUrl.value = ''
 }
 
 const cancelCrop = () => {
+  console.log('CropperModal: cancelCrop called')
   isVisible.value = false
-  localAvatarUrl.value = props.defaultAvatarUrl // 恢复默认头像
-  // emit('updateAvatarUrl', localAvatarUrl.value) // 通知父组件更新
-}
-
-const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG) {
-    ElMessage.error('头像图片必须是 JPG 或 PNG 格式!')
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像图片大小不能超过 2MB!')
-  }
-  return isJPG && isLt2M
+  emit('updateAvatarFile', null)
 }
 
 const saveCrop = () => {
+  console.log('CropperModal: saveCrop called')
   if (cropper.value) {
     const canvas = cropper.value.getCroppedCanvas({
-      width: 200,
-      height: 200,
+      width: 400,
+      height: 400,
       imageSmoothingQuality: 'high'
     })
     canvas.toBlob((blob) => {
-      const timeStamp = Date.now()
-      const fileName = `${timeStamp}.png` // 使用时间戳生成唯一文件名
-      const formData = new FormData()
-      formData.append('file', blob, fileName)
-
-      axios.post('http://localhost:3000/upload-avatar', formData)
-        .then(response => {
-          ElMessage.success('头像裁剪并上传成功')
-          isVisible.value = false
-
-          // 如果 immediateUpdate 为 true，更新正式头像
-          if (props.immediateUpdate) {
-            emit('updateAvatarUrl', `http://localhost:3000${response.data.tempAvatarUrl}`)
-          } else {
-            // 暂时更新，等用户点击“确认修改”后再更新正式头像
-            emit('updateTempAvatarUrl', `http://localhost:3000${response.data.tempAvatarUrl}`)
-          }
-        })
-        .catch(error => {
-          console.error('头像裁剪上传失败:', error)
-          ElMessage.error('头像裁剪上传失败')
-        })
-    })
+      const file = new File([blob], 'avatar.png', { type: 'image/png' })
+      console.log('CropperModal: Cropped image created', file)
+      emit('updateAvatarFile', file)
+      isVisible.value = false
+      ElMessage.success('头像裁剪成功')
+    }, 'image/png')
   }
 }
 
 const initCropper = () => {
+  console.log('CropperModal: initCropper called')
   nextTick(() => {
     if (cropperImage.value) {
       cropper.value = new Cropper(cropperImage.value, {
@@ -114,31 +77,31 @@ const initCropper = () => {
         guides: false,
         center: true,
         highlight: false,
-        // cropBoxResizable: false,
         cropBoxMovable: false,
-        cropBoxResizable: true,
-        minCropBoxWidth: 200,
-        minCropBoxHeight: 200,
+        cropBoxResizable: false,
+        minCropBoxWidth: 400,
+        minCropBoxHeight: 400,
         ready () {
-          // 在这里可以进一步自定义裁剪框的行为
+          console.log('CropperModal: Cropper ready')
           const cropBoxData = cropper.value.getCropBoxData()
           const size = Math.min(cropBoxData.width, cropBoxData.height)
           cropper.value.setCropBoxData({
             left: (cropBoxData.width - size) / 2 + cropBoxData.left,
             top: (cropBoxData.height - size) / 2 + cropBoxData.top,
-            width: size,
-            height: size
+            width: 400,
+            height: 400
           })
         }
       })
     } else {
-      console.error('Failed to find the image element for cropper initialization.')
+      console.error('CropperModal: Failed to find the image element for cropper initialization.')
     }
   })
 }
 
 const watchVisibility = () => {
   watch(isVisible, (newValue) => {
+    console.log('CropperModal: Visibility changed to', newValue)
     if (newValue) {
       initCropper()
     } else {
@@ -148,15 +111,17 @@ const watchVisibility = () => {
 }
 
 onMounted(() => {
+  console.log('CropperModal: Component mounted')
   watchVisibility()
 })
 
 defineExpose({ show })
-
 </script>
 
 <style scoped>
 .cropper-container {
+  /* width: 500px;
+  height: 500px; */
   position: relative;
 }
 
@@ -164,5 +129,4 @@ defineExpose({ show })
 :deep(.cropper-face) {
   border-radius: 50%;
 }
-
 </style>
