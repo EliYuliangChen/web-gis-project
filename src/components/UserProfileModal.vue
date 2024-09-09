@@ -159,10 +159,18 @@ const beforeAvatarUpload = (file) => {
 }
 
 const handleAvatarUpdate = (file) => {
-  userForm.avatarFile = file
-  avatarUrl.value = URL.createObjectURL(file)
-  isAvatarModified.value = true
-  console.log('Updated avatarUrl:', avatarUrl.value)
+  if (file) {
+    userForm.avatarFile = file
+    avatarUrl.value = URL.createObjectURL(file) // 只有在文件存在时才调用 createObjectURL
+    isAvatarModified.value = true
+    console.log('Updated avatarUrl:', avatarUrl.value)
+  } else {
+    // 如果 file 为空，恢复为默认头像
+    userForm.avatarFile = null
+    avatarUrl.value = props.initialUserData.avatarUrl // 恢复初始头像
+    isAvatarModified.value = false
+    console.log('Avatar update cancelled, using default avatar.')
+  }
 }
 
 const confirmChanges = async () => {
