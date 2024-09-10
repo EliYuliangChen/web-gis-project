@@ -13,16 +13,16 @@
             </el-select>
         </el-form-item>
         <el-form-item label="上传图片">
-            <el-upload
+          <el-upload
             class="image-uploader"
-            action="https://jsonplaceholder.typicode.com/posts/"
             :show-file-list="false"
-            :on-success="handleImageSuccess"
+            :on-change="handleImageChange"
             :before-upload="beforeImageUpload"
-            >
+            :auto-upload="false"
+          >
             <img v-if="form.imageUrl" :src="form.imageUrl" class="uploaded-image" />
             <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
-            </el-upload>
+          </el-upload>
         </el-form-item>
         <el-form-item label="描述">
             <el-input v-model="form.description" type="textarea" />
@@ -39,9 +39,11 @@
 import { ref, defineProps, defineEmits, watch, watchEffect } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 const props = defineProps({
   visible: Boolean,
+  markerCoordinates: Object,
   initialImage: String
 })
 
@@ -82,7 +84,6 @@ const handleClose = () => {
 }
 
 const handleSubmit = () => {
-  // 表单验证逻辑
   if (!form.value.name.trim()) {
     ElMessage.warning('请输入标记点名称')
     return
@@ -99,11 +100,45 @@ const handleSubmit = () => {
     ElMessage.warning('请输入标记点描述')
     return
   }
-  emit('submit', form.value)
+
+  if (!props.markerCoordinates) {
+    ElMessage.error('无法获取经纬度，请先放置标记点')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('name', form.value.name)
+  formData.append('type', form.value.type)
+  formData.append('description', form.value.description)
+  formData.append('lat', props.markerCoordinates.lat) // 添加纬度
+  formData.append('lng', props.markerCoordinates.lng) // 添加经度
+
+  // 这里 form.value.imageUrl 包含的是图片的 URL，需要将上传的文件也一起发送
+  formData.append('image', form.value.imageFile)
+
+  // 发送表单数据和文件到后端
+  axios.post('http://192.168.68.103:3000/api/markers', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+    .then(response => {
+      ElMessage.success('标记点提交成功')
+      emit('submit', response.data.marker)
+    })
+    .catch(error => {
+      ElMessage.error('标记点提交失败')
+      console.error('Error submitting marker:', error)
+    })
 }
 
-const handleImageSuccess = (res, file) => {
-  form.value.imageUrl = URL.createObjectURL(file.raw)
+const handleImageChange = (file) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    form.value.imageUrl = e.target.result // 将图片预览显示在上传框中
+  }
+  reader.readAsDataURL(file.raw) // 读取图片文件内容，生成 base64 URL
+  form.value.imageFile = file.raw // 保存图片文件供后续上传
 }
 
 const beforeImageUpload = (file) => {

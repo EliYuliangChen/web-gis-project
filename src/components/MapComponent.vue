@@ -50,6 +50,7 @@
 
     <MarkerForm
       :visible="showMarkerForm"
+      :markerCoordinates="markerCoordinates"
       @close="handleFormClose"
       @submit="handleFormSubmit"
       :initialImage="uploadedImage"
@@ -115,6 +116,7 @@ const marker = ref(null) // 用于放置搜索结果标记
 const showMarkerForm = ref(false) // 是否显示标记表单
 const showUploadDialog = ref(false) // 是否显示上传图片对话框
 const uploadedImage = ref(null) // 上传的图片
+const markerCoordinates = ref(null) // 用于暂时存储标记的经纬度
 
 const userAvatarUrl = ref('') // 用户头像URL
 const username = ref('') // 用户名
@@ -160,6 +162,7 @@ const addMarkerAtClick = (e) => {
       marker.value.remove() // 删除已有的点
     }
     marker.value = new mapboxgl.Marker().setLngLat(e.lngLat).addTo(map.value)
+    markerCoordinates.value = e.lngLat // 保存经纬度
     isPlacingMarker.value = false // 完成放置后退出放置模式
     showMarkerForm.value = true // 显示表单
   }
@@ -177,6 +180,7 @@ const clearMarker = () => {
 
 const handleFormClose = () => {
   showMarkerForm.value = false
+  markerCoordinates.value = null // 清除经纬度
   // 保持 marker 不变
 }
 
